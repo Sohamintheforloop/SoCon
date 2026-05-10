@@ -25,6 +25,16 @@ if($_SERVER["REQUEST_METHOD"]=="POST"){
 
     $content = $_POST['content'];
 
+    $user_id=$_SESSION['user_id'];
+
+    $reminder_datetime =
+
+    !empty($_POST['reminder_datetime'])
+
+    ? $_POST['reminder_datetime']
+
+    : NULL;
+
     $folder_id = $_POST['folder_id'];
 
     $image_name = "";
@@ -55,26 +65,46 @@ if($_SERVER["REQUEST_METHOD"]=="POST"){
     /* INSERT NOTE */
 
     $sql = "
-    INSERT INTO notes
-    (
-        user_id,
-        folder_id,
-        title,
-        content,
-        image_path
-    )
 
-    VALUES
-    (
-        '$user_id',
-        '$folder_id',
-        '$title',
-        '$content',
-        '$image_name'
-    )
-    ";
+INSERT INTO notes
 
-    $conn->query($sql);
+(
+user_id,
+folder_id,
+title,
+content,
+image_path,
+reminder_datetime
+)
+
+VALUES
+
+(
+'$user_id',
+
+".(
+$folder_id
+? "'$folder_id'"
+: "NULL"
+).",
+
+'$title',
+
+'$content',
+
+'$image_name',
+
+".(
+$reminder_datetime
+? "'$reminder_datetime'"
+: "NULL"
+)."
+
+)
+
+";
+
+$conn->query($sql);
 
     header("Location: dashboard.php");
     exit();
@@ -102,6 +132,13 @@ placeholder="Write your note..."
 required>
 </textarea>
 
+<label>
+Remainder
+</label>
+
+<input
+type = "datetime-local"
+name = "reminder_datetime">
 <div class="select-wrapper">
 
 <select name="folder_id">
