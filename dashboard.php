@@ -1,19 +1,47 @@
 <?php
 session_start();
+
 include 'config.php';
 
 if(!isset($_SESSION['user_id'])){
-header("Location: login.php");
-exit();
+    header("Location: login.php");
+    exit();
 }
 
 $user_id=$_SESSION['user_id'];
 
+/* NOTES */
+
 $result=$conn->query(
 "SELECT * FROM notes
-WHERE user_id=$user_id
+WHERE user_id='$user_id'
 ORDER BY created_at DESC"
 );
+
+/* REMINDERS */
+
+$activeReminders=[];
+
+$reminderQuery=$conn->query(
+
+"SELECT * FROM notes
+
+WHERE user_id='$user_id'
+
+AND reminder_datetime IS NOT NULL
+
+AND reminder_datetime <= NOW()
+
+AND reminder_completed=0"
+
+);
+
+while($reminder=$reminderQuery->fetch_assoc()){
+
+$activeReminders[]=
+$reminder['title'];
+
+}
 
 include 'includes/header.php';
 include 'includes/nav.php';
@@ -23,7 +51,33 @@ include 'includes/nav.php';
 
 <?php while($row=$result->fetch_assoc()){ ?>
 
-<div class="note">
+<div class="note
+
+<?php
+
+if(
+
+$row['reminder_datetime']
+
+&&
+
+strtotime(
+$row['reminder_datetime']
+) < time()
+
+&&
+
+$row['reminder_completed']==0
+
+){
+
+echo ' overdue';
+
+}
+
+?>
+
+">
 
 <h3>
 <?php echo htmlspecialchars(
@@ -33,70 +87,39 @@ $row['title']
 
 <p>
 <?php echo nl2br(
-htmlspecialchars($row['content'])
+htmlspecialchars(
+$row['content']
+)
 ); ?>
 </p>
 
-<small>
-Created:
-<?php echo $row['created_at']; ?>
-</small>
+<!-- REMINDER -->
 
-<div class="actions">
+<?php if($row['reminder_datetime']){ ?>
 
-<a href="edit_note.php?id=<?php echo $row['id']; ?>">
-Edit
-</a>
+<div class="reminder-box">
 
-<a href="delete_note.php?id=<?php echo $row['id']; ?>"
-onclick="return confirm('Delete this note?');">
-Delete
-</a>
+⏳ Reminder:
 
-</div>
+<?php
+
+echo date(
+
+"d M Y - h:i A",
+
+strtotime(
+$row['reminder_datetime']
+)
+
+);
+
+?>
 
 </div>
 
 <?php } ?>
-<?php
 
-$uncategorized = $conn->query(
-
-"SELECT * FROM notes
-
-WHERE user_id='$user_id'
-
-AND folder_id IS NULL
-
-ORDER BY created_at DESC"
-
-);
-
-?>
-
-<?php if($uncategorized->num_rows > 0){ ?>
-
-<div class="note">
-
-<h2>Uncategorized</h2>
-
-<?php while($row=$uncategorized->fetch_assoc()){ ?>
-
-<div class="note">
-
-<h3>
-<?php echo $row['title']; ?>
-</h3>
-
-<p>
-<?php
-echo nl2br(
-htmlspecialchars(
-$row['content']
-)
-);
-?>
-</p>
+<!-- IMAGE -->
 
 <?php if(!empty($row['image_path'])){ ?>
 
@@ -113,8 +136,11 @@ Created:
 
 <div class="actions">
 
-<a href="edit_note.php?id=<?php echo $row['id']; ?>">
+<a
+href="edit_note.php?id=<?php echo $row['id']; ?>">
+
 Edit
+
 </a>
 
 <a
@@ -131,9 +157,8 @@ Delete
 
 <?php } ?>
 
-</div>
+<!-- MAP SECTION -->
 
-<?php } ?>
 <h2>SoCon</h2>
 
 <?php
@@ -161,7 +186,9 @@ class="gallery-image">
 </a>
 
 <h3>
-<?php echo $map['map_name']; ?>
+<?php echo htmlspecialchars(
+$map['map_name']
+); ?>
 </h3>
 
 </div>
@@ -169,5 +196,33 @@ class="gallery-image">
 <?php } ?>
 
 </div>
+
+<!-- REMINDER POPUP -->
+
+<script>
+
+const reminders =
+
+<?php
+echo json_encode($activeReminders);
+?>;
+
+if(reminders.length > 0){
+
+setTimeout(()=>{
+
+alert(
+
+"Reminder Due:\\n\\n" +
+
+reminders.join("\\n")
+
+);
+
+},1000);
+
+}
+
+</script>
 
 <?php include 'includes/footer.php'; ?>
